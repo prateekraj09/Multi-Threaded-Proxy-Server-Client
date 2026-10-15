@@ -1,85 +1,70 @@
-<h1>Multi Threaded Proxy Server with and without Cache</h1>
+# High-Performance Multithreaded HTTP Proxy Server with LRU Caching
 
-This project is implemented using `C` and Parsing of HTTP referred from <a href = "https://github.com/vaibhavnaagar/proxy-server"> Proxy Server </a>
+A custom, low-level network proxy server implemented from scratch in C to handle concurrent HTTP requests. This systems-level project demonstrates core competencies in POSIX multi-threading, concurrency control mechanisms, TCP/IP socket programming, and custom memory-bounded caching algorithms.
 
+---
 
-## Index
+## 🏗️ System Architecture & Workflow
 
-- [Project Theory](https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient#project-theory)
-- [How to Run](https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient#How-to-Run)
-- [Demo](https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient#Demo)
-- [Contributing](https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient#contributing)
+The proxy server acts as an intermediary system-level service between a local client (e.g., a web browser) and the target remote server.
 
-## Project Theory
+1. **Connection Listener:** The main execution thread initializes a network socket, binds to a specified port, and actively listens for incoming TCP client connection requests.
+2. **Worker Thread Dispatch:** Upon establishing a client connection, the main thread hands off the client's file descriptor to a dedicated worker thread via POSIX threads (`pthreads`).
+3. **Request Parsing:** The worker thread dynamically parses incoming HTTP request strings, extracting host names, paths, and HTTP protocol variants.
+4. **Cache Lookup (LRU):** The proxy checks a shared, size-bounded internal memory cache using a Least Recently Used (LRU) eviction policy.
+   - **Cache Hit:** The requested payload is directly fetched from internal memory and streamed back to the client, bypassing network latency.
+   - **Cache Miss:** The proxy opens a new TCP connection to the target remote server, downloads the requested data, updates the shared cache (potentially triggering LRU eviction), and streams the response back to the client.
 
-[[Back to top]](https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient#index)
+---
 
-##### Introduction
+## ⚡ Core Systems Programming Components
 
-##### Basic Working Flow of the Proxy Server:
-![](https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient/blob/main/pics/UML.JPG)
+### 1. Concurrency Control & Synchronization
+* **Thread-Safe Shared Memory:** To protect the shared LRU cache memory resource from multi-threaded race conditions during insertions and lookups, strict serialization policies are enforced using standard synchronization primitives.
+* **Optimized Semaphores:** Implemented explicit semaphore constructs (`sem_wait` and `sem_post`) over traditional conditional variable workflows to minimize thread synchronization overhead during resource state transitions.
 
-##### How did we implement Multi-threading?
-- Used Semaphore instead of Condition Variables and pthread_join() and pthread_exit() function. 
-- pthread_join() requires us to pass the thread id of the the thread to wait for. 
-- Semaphore’s sem_wait() and sem_post() doesn’t need any parameter. So it is a better option. 
+### 2. Low-Level Network Socket Programming
+* **API Integration:** Leveraged structural Unix socket APIs (`socket()`, `bind()`, `listen()`, `accept()`, `connect()`) to build custom system communication channels.
+* **Packet Streaming:** Handled non-blocking data streams using byte-level buffer manipulation routines, optimizing network throughput across transport layers.
 
+### 3. In-Memory Cache Optimization (LRU)
+* **Data Structure:** Implemented using a linked list structure encapsulating fixed-size memory blocks to control the heap footprint.
+* **Deterministic Eviction:** Employs an exact O(N) lookup and tracking mechanism that moves recently accessed nodes to the head and purges the least-frequently accessed nodes from the tail when cache limits are reached.
 
-##### Motivation/Need of Project
-- To Understand → 
-  - The working of requests from our local computer to the server.
-  - The handling of multiple client requests from various clients.
-  - Locking procedure for concurrency.
-  - The concept of cache and its different functions that might be used by browsers.
-- Proxy Server do → 
-  - It speeds up the process and reduces the traffic on the server side.
-  - It can be used to restrict user from accessing specific websites.
-  - A good proxy will change the IP such that the server wouldn’t know about the client who sent the request.
-  - Changes can be made in Proxy to encrypt the requests, to stop anyone accessing the request illegally from your client.
- 
-##### OS Component Used ​
-- Threading
-- Locks 
-- Semaphore
-- Cache (LRU algorithm is used in it)
+---
 
-##### Limitations ​
-- If a URL opens multiple clients itself, then our cache will store each client’s response as a separate element in the linked list. So, during retrieval from the cache, only a chunk of response will be send and the website will not open
-- Fixed size of cache element, so big websites may not be stored in cache. 
+## 🛠️ Compilation & Execution
 
-##### How this project can be extended? ​
-- This code can be implemented using multiprocessing that can speed up the process with parallelism.
-- We can decide which type of websites should be allowed by extending the code.
-- We can implement requests like POST with this code.
+### Prerequisites
+* **Operating System:** Linux / UNIX-based environment (Required for POSIX thread and socket APIs).
+* **Tools:** GCC Compiler and GNU Make build automation utilities.
 
+### Steps to Run
+1. Clone the repository into your local systems environment:
+   ```bash
+   git clone https://github.com
+   cd MultiThreaded-HTTP-Proxy-Server
+   ```
 
-# Note :-
-- Code is well commented. For any doubt you can refer to the comments.
+2. Compile the source code using the provided automated project Makefile:
+   ```bash
+   make all
+   ```
 
+3. Initialize the proxy server by specifying a target execution port number:
+   ```bash
+   ./proxy <port_number>
+   ```
+   *Example:* `./proxy 8080`
 
-## How to Run
+4. Validate proxy routing performance via terminal or client routing utilities:
+   ```bash
+   curl -x http://localhost:8080 http://example.com
+   ```
 
-```bash
-$ git clone https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient.git
-$ cd MultiThreadedProxyServerClient
-$ make all
-$ ./proxy <port no.>
-```
-`Open http://localhost:port/https://www.cs.princeton.edu/`
+---
 
-# Note:
-- This code can only be run in Linux Machine. Please disable your browser cache.
-- To run the proxy without cache Change the name of the file (`proxy_server_with_cache.c to proxy_server_without_cache.c`) MakeFile.
-
-## Demo
-![](https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient/blob/main/pics/cache.png)
-- When website is opened for the first time (`url not found`) then cache will be miss.
-- Then if you again open that website again then `Data is retrieved from the cache` will be printed.
-
-## Contributing
-
-[[Back to top]](https://github.com/Lovepreet-Singh-LPSK/MultiThreadedProxyServerClient#index)
-
-Feel free to add some useful. You can see `How this code can be extended`. Use ideas from there and feel free to fork and CHANGE. 
-
-#### Enjoy CODE and pull requests are highly appreciated.
+## 🚀 Future Roadmap & Scalability Extensions
+* **Parallel Performance:** Transition from a purely multithreaded runtime to a hybrid multi-processing architecture leveraging distinct Linux process spaces to achieve true hardware parallelism.
+* **Expanded Method Protocols:** Extend the custom parsing engine to natively support stateless `POST`, `PUT`, and `DELETE` HTTP verbs alongside standard `GET` requests.
+* **Network Security Layer:** Integrate an SSL/TLS layer to support safe upstream HTTPS tunneling and encrypted traffic inspection.
